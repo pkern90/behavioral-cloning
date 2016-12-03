@@ -1,8 +1,8 @@
 import scipy.misc as spm
-import numpy as np
 from keras.preprocessing.image import *
 from keras import backend as K
 import os
+from keras.applications.vgg16 import preprocess_input
 
 
 def normalize(images, new_max, new_min, old_max=None, old_min=None):
@@ -12,6 +12,16 @@ def normalize(images, new_max, new_min, old_max=None, old_min=None):
         old_max = np.max(images)
 
     return (images - old_min) * ((new_max - new_min) / (old_max - old_min)) + new_min
+
+
+def crop_image(img, cropping):
+    return img[cropping[0]:img.shape[0] - cropping[1], cropping[2]:img.shape[1] - cropping[3], :]
+
+
+def get_cropped_shape(img_shape, cropping):
+    return (img_shape[0] - cropping[0] - cropping[1],
+            img_shape[1] - cropping[2] - cropping[3],
+            img_shape[2])
 
 
 def resize_image(img, size):
@@ -26,24 +36,22 @@ def adjust_path(path, new_location):
     return '%s/%s' % (new_location, extract_filename(path))
 
 
-def bulk_load_images(paths, resize=None, dtype=np.uint8):
-    images = None
-    for i, path in enumerate(paths):
-        img = spm.imread(path)
-
-        if resize:
-            img = resize_image(img, resize)
-
-        if images is None:
-            images = np.zeros((len(paths), *img.shape), dtype=dtype)
+def load_images(paths, target_size):
+    images = np.zeros((len(paths), *target_size, 3))
+    for i, p in enumerate(paths):
+        img = load_img(p, target_size=target_size)
+        img = img_to_array(img, dim_ordering='tf')
         images[i] = img
 
     return images
 
 
 class RegressionImageDataGenerator(object):
-    '''Generate minibatches with
+    """Generate minibatches with
     real-time data augmentation.
+
+    This implementation is a modified version of the ImageDataGenerator from Keras
+    (https://github.com/fchollet/keras/blob/master/keras/preprocessing/image.py).
 
     # Arguments
         featurewise_center: set input mean to 0 over the dataset.
@@ -52,12 +60,17 @@ class RegressionImageDataGenerator(object):
         samplewise_std_normalization: divide each input by its std.
         zca_whitening: apply ZCA whitening.
         rotation_range: degrees (0 to 180).
+        rotation_value_transform: function to modify the label based on the rotation.
         width_shift_range: fraction of total width.
+        width_shift_value_transform: function to modify the label based on the width_shift.
         height_shift_range: fraction of total height.
+        height_shift_value_transform: function to modify the label based on the height_shift.
         shear_range: shear intensity (shear angle in radians).
+        shear_value_transform: function to modify the label based on the shear.
         zoom_range: amount of zoom. if scalar z, zoom will be randomly picked
             in the range [1-z, 1+z]. A sequence of two can be passed instead
             to select this range.
+        zoom_value_transform: function to modify the label based on the zoom.
         channel_shift_range: shift range for each channels.
         fill_mode: points outside the boundaries are filled according to the
             given mode ('constant', 'nearest', 'reflect' or 'wrap'). Default
@@ -65,7 +78,9 @@ class RegressionImageDataGenerator(object):
         cval: value used for points outside the boundaries when fill_mode is
             'constant'. Default is 0.
         horizontal_flip: whether to randomly flip images horizontally.
+        horizontal_flip_value_transform: function to modify the label based on the horizontal_flip.
         vertical_flip: whether to randomly flip images vertically.
+        vertical_flip_value_transform: function to modify the label based on the vertical_flip.
         rescale: rescaling factor. If None or 0, no rescaling is applied,
             otherwise we multiply the data by the value provided (before applying
             any other transformation).
@@ -74,7 +89,7 @@ class RegressionImageDataGenerator(object):
             It defaults to the `image_dim_ordering` value found in your
             Keras config file at `~/.keras/keras.json`.
             If you never set it, then it will be "th".
-    '''
+    """
 
     def __init__(self,
                  featurewise_center=False,
@@ -100,7 +115,8 @@ class RegressionImageDataGenerator(object):
                  vertical_flip=False,
                  vertical_flip_value_transform=None,
                  rescale=None,
-                 dim_ordering='default'):
+                 dim_ordering='default',
+                 cropping=(0, 0, 0, 0)):
         if dim_ordering == 'default':
             dim_ordering = K.image_dim_ordering()
         self.__dict__.update(locals())
@@ -132,6 +148,8 @@ class RegressionImageDataGenerator(object):
                             'a tuple or list of two floats. '
                             'Received arg: ', zoom_range)
 
+        self.cropping = cropping
+
     def flow(self, X, y=None, batch_size=32, shuffle=True, seed=None,
              save_to_dir=None, save_prefix='', save_format='jpeg'):
         return RegressionNumpyArrayIterator(
@@ -150,6 +168,9 @@ class RegressionImageDataGenerator(object):
             dim_ordering=self.dim_ordering,
             batch_size=batch_size, shuffle=shuffle, seed=seed,
             save_to_dir=save_to_dir, save_prefix=save_prefix, save_format=save_format)
+
+    def crop(self, x):
+        return crop_image(x, self.cropping)
 
     def standardize(self, x):
         if self.rescale:
@@ -278,6 +299,11 @@ class RegressionImageDataGenerator(object):
             np.random.seed(seed)
 
         X = np.copy(X)
+        cropped = np.zeros((X.shape[0], *get_cropped_shape(X.shape[1:], self.cropping)))
+        for i, img in enumerate(X):
+            cropped[i] = self.crop(img)
+        X = cropped
+
         if augment:
             aX = np.zeros(tuple([rounds * X.shape[0]] + list(X.shape)[1:]))
             for r in range(rounds):
@@ -301,6 +327,10 @@ class RegressionImageDataGenerator(object):
 
 
 class RegressionNumpyArrayIterator(Iterator):
+    """
+        This implementation is a modified version of the NumpyArrayIterator from Keras
+        (https://github.com/fchollet/keras/blob/master/keras/preprocessing/image.py).
+    """
 
     def __init__(self, X, y, image_data_generator,
                  batch_size=32, shuffle=False, seed=None,
@@ -329,14 +359,16 @@ class RegressionNumpyArrayIterator(Iterator):
         with self.lock:
             index_array, current_index, current_batch_size = next(self.index_generator)
         # The transformation of images is not under thread lock so it can be done in parallel
-        batch_x = np.zeros((current_batch_size,) + (66, 200, 3))
+        output_shape = get_cropped_shape(self.X[0].shape, self.image_data_generator.cropping)
+        batch_x = np.zeros((current_batch_size,) + output_shape)
         batch_y = np.zeros(current_batch_size)
         for i, j in enumerate(index_array):
             x = self.X[j]
             y = self.y[j]
+            x = self.image_data_generator.crop(x)
             x, y = self.image_data_generator.random_transform(x, y)
             x = self.image_data_generator.standardize(x)
-            batch_x[i] = x[-66:, :, :]
+            batch_x[i] = x
             batch_y[i] = y
         if self.save_to_dir:
             for i in range(current_batch_size):
@@ -351,6 +383,11 @@ class RegressionNumpyArrayIterator(Iterator):
 
 
 class RegressionDirectoryIterator(Iterator):
+    """
+        This implementation is a modified version of the DirectoryIterator from Keras
+        (https://github.com/fchollet/keras/blob/master/keras/preprocessing/image.py).
+    """
+
     def __init__(self, paths, values, image_data_generator,
                  target_size=(256, 256), color_mode='rgb',
                  dim_ordering='default',
@@ -398,8 +435,8 @@ class RegressionDirectoryIterator(Iterator):
         with self.lock:
             index_array, current_index, current_batch_size = next(self.index_generator)
         # The transformation of images is not under thread lock so it can be done in parallel
-        # batch_x = np.zeros((current_batch_size,) + self.image_shape)
-        batch_x = np.zeros((current_batch_size,) + (66, 200, 3))
+        output_shape = get_cropped_shape(self.image_shape, self.image_data_generator.cropping)
+        batch_x = np.zeros((current_batch_size,) + output_shape)
         batch_y = np.zeros(current_batch_size)
         grayscale = self.color_mode == 'grayscale'
 
@@ -410,11 +447,13 @@ class RegressionDirectoryIterator(Iterator):
 
             y = self.values[j]
             x = img_to_array(img, dim_ordering=self.dim_ordering)
+            x = self.image_data_generator.crop(x)
             x, y = self.image_data_generator.random_transform(x, y)
             x = self.image_data_generator.standardize(x)
 
-            batch_x[i] = x[-66:, :, :]
+            batch_x[i] = x
             batch_y[i] = y
+
         # optionally save augmented images to disk for debugging purposes
         if self.save_to_dir:
             for i in range(current_batch_size):

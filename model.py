@@ -1,112 +1,143 @@
-from keras.applications.vgg16 import VGG16
-from keras.applications.inception_v3 import InceptionV3
-from keras.applications.vgg16 import preprocess_input
-from keras.layers import Dense, GlobalAveragePooling2D, Input
-from keras.models import Model
-from keras.layers.noise import GaussianNoise
-from keras.layers.normalization import BatchNormalization
-from keras.models import Sequential
-from keras.layers import Convolution2D, MaxPooling2D
-from keras.layers import Activation, Dropout, Flatten, Dense, ELU, Lambda
-
-from utils import RegressionImageDataGenerator
-import numpy as np
+# Imports
 import json
+
 import pandas as pd
+from keras.applications.vgg16 import VGG16
+from keras.callbacks import EarlyStopping, ModelCheckpoint
+from keras.layers import Convolution2D, Input, MaxPooling2D
+from keras.layers import Dropout, Flatten, Dense
+from keras.models import Model
+from keras.regularizers import l2
+from keras.utils.visualize_util import plot
 
 import matplotlib.pyplot as plt
 
-IMG_SIZE = [100, 200]
+from utils import RegressionImageDataGenerator, get_cropped_shape, load_images
+
+import numpy as np
+np.random.seed(7)
+
+# Constants
+IMG_SIZE = [160, 320]
+CROPPING = (54, 0, 0, 0)
 SHIFT_OFFSET = 0.2
 SHIFT_RANGE = 0.2
 
 
-header = ['center_img', 'left_img', 'right_img', 'steering_angle', 'throttle', 'break', 'speed']
-log = pd.read_csv('data/track1_central/driving_log.csv', names=header)
-log_recovery = pd.read_csv('data/track1_recovery/driving_log.csv', names=header)
-log_reverse = pd.read_csv('data/track1_reverse/driving_log.csv', names=header)
-log_recovery_reverse = pd.read_csv('data/track1_recovery_reverse/driving_log.csv', names=header)
+# Data loading
+def get_generator(from_directory=False, batch_size=32, fit_sample_size=None):
+    header = ['center_img', 'left_img', 'right_img', 'steering_angle', 'throttle', 'break', 'speed']
+    data_paths = ['data/track1_central/driving_log.csv',
+                  'data/track1_recovery/driving_log.csv',
+                  'data/track1_reverse/driving_log.csv',
+                  'data/track1_recovery_reverse/driving_log.csv',
+                  'data/track2_central/driving_log.csv']
 
-log_val = pd.read_csv('data/track1_test/driving_log.csv', names=header)
+    val_paths = ['data/track1_test/driving_log.csv',
+                 'data/track2_test/driving_log.csv']
 
-log = pd.concat([log, log_reverse, log_recovery, log_recovery_reverse])
-#log = pd.concat([log, log_reverse])
+    log = pd.concat([pd.read_csv(path, names=header) for path in data_paths])
+    val_log = pd.concat([pd.read_csv(path, names=header) for path in val_paths])
 
-log_left = log[['left_img', 'steering_angle']].copy()
-log_left.loc[:, 'steering_angle'] -= SHIFT_OFFSET
+    # Create feature value pairs for the left camera images by subtracting the offset from the steering angle.
+    log_left = log[['left_img', 'steering_angle']].copy()
+    log_left.loc[:, 'steering_angle'] -= SHIFT_OFFSET
 
-log_right = log[['right_img', 'steering_angle']].copy()
-log_right.loc[:, 'steering_angle'] += SHIFT_OFFSET
+    # Create feature value pairs for the right camera images by adding the offset to the steering angle.
+    log_right = log[['right_img', 'steering_angle']].copy()
+    log_right.loc[:, 'steering_angle'] += SHIFT_OFFSET
 
-paths = pd.concat([log.center_img, log_left.left_img, log_right.right_img]).str.strip()
-values = pd.concat([log.steering_angle, log_left.steering_angle, log_right.steering_angle])
+    paths = pd.concat([log.center_img, log_left.left_img, log_right.right_img]).str.strip()
+    values = pd.concat([log.steering_angle, log_left.steering_angle, log_right.steering_angle])
 
-datagen = RegressionImageDataGenerator(rescale=lambda x: x/127.5 - 1.,
-                                       horizontal_flip=True,
-                                       channel_shift_range=0.1,
-                                       width_shift_range=SHIFT_RANGE,
-                                       width_shift_value_transform=lambda val, shift: val - ((SHIFT_OFFSET/SHIFT_RANGE)*shift),
-                                       horizontal_flip_value_transform=lambda val: -val)
+    datagen = RegressionImageDataGenerator(rescale=lambda x: x / 127.5 - 1.,
+                                           horizontal_flip=True,
+                                           channel_shift_range=0.2,
+                                           width_shift_range=SHIFT_RANGE,
+                                           width_shift_value_transform=lambda val, shift: val - (
+                                               (SHIFT_OFFSET / SHIFT_RANGE) * shift),
+                                           horizontal_flip_value_transform=lambda val: -val,
+                                           cropping=CROPPING)
 
-val_datagen = RegressionImageDataGenerator(rescale=lambda x: x/127.5 - 1.)
+    val_datagen = RegressionImageDataGenerator(rescale=lambda x: x / 127.5 - 1.,
+                                               cropping=CROPPING)
 
-rdi_train = datagen.flow_from_directory(paths.values,
-                                        values.values,
-                                        target_size=IMG_SIZE,
-                                        shuffle=False)
+    if fit_sample_size is not None:
+        sample_to_fit = load_images(paths.sample(fit_sample_size), IMG_SIZE)
+        datagen.fit(sample_to_fit)
+        val_datagen.fit(sample_to_fit)
+        del sample_to_fit
 
-rdi_val = val_datagen.flow_from_directory(log_val['center_img'].values,
-                                          log_val['steering_angle'].values,
-                                          target_size=IMG_SIZE,
-                                          shuffle=True)
+    if from_directory:
+        return (datagen.flow_from_directory(paths.values, values.values, shuffle=True, target_size=IMG_SIZE, batch_size=batch_size),
+                val_datagen.flow_from_directory(val_log.center_img.values, val_log.steering_angle.values, shuffle=True, target_size=IMG_SIZE, batch_size=batch_size))
+    else:
+        images = load_images(paths, IMG_SIZE)
+        val_images = load_images(val_log.center_img, IMG_SIZE)
 
-# x, y = next(rdi_train)
-# print(y[0])
-# plt.imshow(x[0])
-# plt.show()
-
-# plt.hist(y)
-# plt.show()
+        return (datagen.flow(images, values.values, shuffle=True, batch_size=batch_size),
+                val_datagen.flow(val_images, val_log.steering_angle.values, shuffle=True, batch_size=batch_size))
 
 
-model = Sequential()
-model.add(GaussianNoise(0.2, input_shape=(66, 200, 3)))
-model.add(Convolution2D(24, 5, 5, subsample=(2, 2)))
-model.add(BatchNormalization())
-model.add(Activation('relu'))
-model.add(Convolution2D(36, 5, 5, subsample=(2, 2)))
-model.add(BatchNormalization())
-model.add(Activation('relu'))
-model.add(Convolution2D(48, 5, 5, subsample=(1, 2)))
-model.add(BatchNormalization())
-model.add(Activation('relu'))
-model.add(Convolution2D(64, 3, 3, subsample=(1, 2)))
-model.add(BatchNormalization())
-model.add(Activation('relu'))
-model.add(Convolution2D(64, 3, 3))
-model.add(BatchNormalization())
-model.add(Flatten())
-model.add(Dropout(.2))
-model.add(Activation('relu'))
-model.add(Dense(512))
-model.add(BatchNormalization())
-model.add(Dropout(.5))
-model.add(Activation('relu'))
-model.add(Dense(1))
+def get_model():
+    input_layer = Input(shape=get_cropped_shape((*IMG_SIZE, 3), CROPPING))
+    base_model = VGG16(weights='imagenet', include_top=False, input_tensor=input_layer)
 
-model.summary()
+    # Remove the last block of the VGG16 net.
+    [base_model.layers.pop() for _ in range(4)]
+    base_model.outputs = [base_model.layers[-1].output]
+    base_model.layers[-1].outbound_nodes = []
 
-model.compile(optimizer='adam', loss='mse')
+    # Make sure pre trained layers from the VGG net don't change while training.
+    for layer in base_model.layers:
+        layer.trainable = False
 
-model.fit_generator(rdi_train,
-                    validation_data=rdi_train,
-                    nb_val_samples=len(log_val),
-                    samples_per_epoch=len(paths),
-                    nb_epoch=5)
+    # Add last block to the VGG model with modified sub sampling.
+    layer = base_model.outputs[0]
+    layer = Convolution2D(512, 3, 3, subsample=(2, 2), activation='relu', border_mode='same', name='block5_conv1')(layer)
+    layer = Convolution2D(512, 3, 3, subsample=(1, 2), activation='relu', border_mode='same', name='block5_conv2')(layer)
+    layer = Convolution2D(512, 3, 3, subsample=(1, 2), activation='relu', border_mode='same', name='block5_conv3')(layer)
 
-model_json = model.to_json()
-with open('model.json', 'w') as f:
-    json.dump(model_json, f)
+    layer = Flatten()(layer)
+    layer = Dropout(.2)(layer)
+    layer = Dense(2048,  activation='relu', name='fc1')(layer)
+    layer = Dropout(.2)(layer)
+    layer = Dense(2048, activation='relu', name='fc2')(layer)
+    layer = Dropout(.5)(layer)
+    layer = Dense(1, activation='linear', name='predictions')(layer)
 
-model.save_weights('model.h5')
+    return Model(input=base_model.input, output=layer)
 
+if __name__ == '__main__':
+    model = get_model()
+    model.summary()
+    plot(model, to_file='model.png', show_shapes=True)
+
+    model.compile(optimizer='adam', loss='mse')
+
+    # Persist trained model
+    model_json = model.to_json()
+    with open('model.json', 'w') as f:
+        json.dump(model_json, f)
+
+    rdi_train, rdi_val = get_generator(True, batch_size=128)
+
+    checkpoint = ModelCheckpoint('model.h5', monitor='val_loss', verbose=1, save_best_only=True, save_weights_only=False, mode='auto')
+    early_stopping = EarlyStopping(monitor='val_loss', min_delta=0, patience=5, verbose=1, mode='auto')
+
+    # Train the model with exactly one version of each image
+    history = model.fit_generator(rdi_train,
+                                  samples_per_epoch=rdi_train.N,
+                                  validation_data=rdi_val,
+                                  nb_val_samples=rdi_val.N,
+                                  nb_epoch=50,
+                                  callbacks=[checkpoint, early_stopping])
+
+    # summarize history for loss
+    plt.plot(history.history['loss'])
+    plt.plot(history.history['val_loss'])
+    plt.title('model loss')
+    plt.ylabel('loss')
+    plt.xlabel('epoch')
+    plt.legend(['train', 'test'], loc='upper left')
+    plt.show()

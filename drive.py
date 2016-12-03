@@ -15,13 +15,12 @@ from io import BytesIO
 from keras.models import model_from_json
 from keras.preprocessing.image import ImageDataGenerator, array_to_img, img_to_array
 
-import utils as u
+from utils import resize_image, crop_image
+from model import CROPPING, IMG_SIZE
 
 sio = socketio.Server()
 app = Flask(__name__)
 model = None
-prev_image_array = None
-
 
 @sio.on('telemetry')
 def telemetry(sid, data):
@@ -35,15 +34,11 @@ def telemetry(sid, data):
     imgString = data["image"]
     image = Image.open(BytesIO(base64.b64decode(imgString)))
     image_array = np.asarray(image)
-    image_resized = u.resize_image(image_array, [100, 200])
-    images_norm = image_resized/127.5 - 1.
-    #images_grey = np.average(images_norm, axis=2)
-    #images_grey = images_grey.reshape((*images_grey.shape, 1))
+    image_resized = resize_image(image_array, IMG_SIZE)
+    image_norm = image_resized/127.5 - 1.
+    image_cropped = crop_image(image_norm, CROPPING)
 
-    # global prev_image_array
-    # prev_image_array = np.roll(prev_image_array, 1)
-    # prev_image_array[0, :, :, 0] = images_grey
-    transformed_image_array = images_norm[None, -66:, :, :]
+    transformed_image_array = image_cropped[None, :, :, :]
 
 
     # This model currently assumes that the features of the model are just the images. Feel free to change this.
