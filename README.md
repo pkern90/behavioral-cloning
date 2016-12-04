@@ -11,6 +11,12 @@ Track 1                       |  Track 2
 ## Retrain The Model
 # Structure
 ## Data
+
+Left                                   |  Center                                   |  Right
+:-------------------------------------:|:-----------------------------------------:|:-------------------------------------:
+![Sample Left](images/left_sample.jpg) | ![Sample Center](images/center_sample.jpg)|![Sample Left](images/right_sample.jpg)
+
+
 ## Model
 
 <a href="https://raw.githubusercontent.com/pkern90/behavioral-cloning/master/images/model_wide.png" target="_blank"><img src="images/model_wide.png"></img> </a>
