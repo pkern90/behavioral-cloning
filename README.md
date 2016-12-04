@@ -1,8 +1,8 @@
 # Behavioral Cloning
 
-Track 1             |  Track 2
-:-------------------------:|:-------------------------:
-![Track 1](https://github.com/pkern90/behavioral-cloning/blob/master/images/track1.gif)  |  ![Track 2](https://github.com/pkern90/behavioral-cloning/blob/master/images/track2.gif)
+Track 1                       |  Track 2
+:----------------------------:|:------------------------------:
+![Track 1](images/track1.gif) | ![Track 2](images/track2.gif)
 
 
 # Getting Started
@@ -12,3 +12,5 @@ Track 1             |  Track 2
 # Structure
 ## Data
 ## Model
+
+<a href="https://raw.githubusercontent.com/pkern90/behavioral-cloning/master/images/model_wide.png" target="_blank"><img src="images/model_wide.png"></img> </a>
