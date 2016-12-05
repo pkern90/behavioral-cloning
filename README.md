@@ -55,3 +55,16 @@ Beside the images the the simulator also creates a log file while recording cont
 ## Model
 
 <a href="https://raw.githubusercontent.com/pkern90/behavioral-cloning/master/images/model_wide.png" target="_blank"><img src="images/model_wide.png"></img> </a>
+
+## Training
+
+During training a image generator provides data to the model. Since keras vanilla [ImageDataGenerator](https://keras.io/preprocessing/image/) is mainly suited for classification problems I extended the implementation to better work with continous labels. The two main differnces beeing that flow_from_directory takes the labels as paramter instead of infering them from folder names and ability to add transform funktion for the labels to the varius random image transformations. The latter allows to generate randomly transforme images with modified expected values. One particular usecase is to randomly flip road images. If a image gets flipped you also need to change sign of the steering angle. Other changes include the option to pass a function as rescale parameter and the option to cropp images.
+
+The following code snipped shows an example usage of the modified ImageDataGenerator. Images will be normalized to a range from -1 to 1, randomly flipped and also cropped from the top by 32 pixel.
+
+```python
+datagen = RegressionImageDataGenerator(rescale=lambda x: x / 127.5 - 1.,
+                                       horizontal_flip=True,
+                                       horizontal_flip_value_transform=lambda val: -val,
+                                       cropping=(32, 0, 0, 0))
+```
