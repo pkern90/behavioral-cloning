@@ -79,24 +79,27 @@ Beside the images the the simulator also creates a log file while recording cont
 
 The data used for training the model can be downloaded [here](https://drive.google.com/open?id=0B02X9kiSe3GBczR6MDdscWxuTEU). It contains the following folders:
 
-```
+Used for training
 
-Name                                    | Number Images  |
-----------------------------------------|----------------|
-  Used for training                                      |
-----------------------------------------|----------------|
-track1_central/driving_log.csv          |  8.978         |
-track1_recovery/driving_log.csv         |  2.369         |
-track1_reverse/driving_log.csv          |  9.254         |
-track1_recovery_reverse/driving_log.csv |  2.396         |
-track2_central/driving_log.csv          | 19.274         |
-----------------------------------------|----------------|
- Used for validation                                     |
-----------------------------------------|----------------|
-track1_test/driving_log.csv             |  2.882         |
-track2_test/driving_log.csv             |  2.924         |
-----------------------------------------|----------------|
-```
+| Name                     | Number Images  | Description                                                               |
+|:-------------------------|---------------:|:--------------------------------------------------------------------------|
+| track1_central           |  8.978         | driving centered on the road                                              |
+| track1_recovery          |  2.369         | driving from the side of the road back to the center                      |
+| track1_reverse           |  9.254         | driving as centered on the road as possible in opposite direction         |  
+| track1_recovery_reverse  |  2.396         | driving from the side of the road back to the center in opposite direction|
+| track2_central           | 19.274         | driving centered on the road on the second track in both directions       |
+| **total**                | **42.271**     |                                                                           |
+
+
+Used for validation
+
+| Name                     | Number Images  | Description                                                               |
+|:-------------------------|---------------:|:--------------------------------------------------------------------------|
+| track1_test              |  2.882         | driving centered on the road for one round on track 1                     |
+| track2_test              |  2.924         | driving centered on the road for one round on track 2                     |
+| **total**                | **5.806**      |                                                                           |
+
+
 
 ## Model
 
