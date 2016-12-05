@@ -77,7 +77,26 @@ Beside the images the the simulator also creates a log file while recording cont
 
 ![Sample Log](images/sample_log.png)
 
-The data used for training the model can be downloaded [here](https://drive.google.com/open?id=0B02X9kiSe3GBczR6MDdscWxuTEU).
+The data used for training the model can be downloaded [here](https://drive.google.com/open?id=0B02X9kiSe3GBczR6MDdscWxuTEU). It contains the following folders:
+
+```
+
+Name                                    | Number Images  |
+----------------------------------------|----------------|
+  Used for training                                      |
+----------------------------------------|----------------|
+track1_central/driving_log.csv          |  8.978         |
+track1_recovery/driving_log.csv         |  2.369         |
+track1_reverse/driving_log.csv          |  9.254         |
+track1_recovery_reverse/driving_log.csv |  2.396         |
+track2_central/driving_log.csv          | 19.274         |
+----------------------------------------|----------------|
+ Used for validation                                     |
+----------------------------------------|----------------|
+track1_test/driving_log.csv             |  2.882         |
+track2_test/driving_log.csv             |  2.924         |
+----------------------------------------|----------------|
+```
 
 ## Model
 
