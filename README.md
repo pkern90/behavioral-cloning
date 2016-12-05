@@ -1,5 +1,9 @@
 # Behavioral Cloning
 
+This project was created as an assessment for the [Self-Driving Car Nanodegree](https://www.udacity.com/course/self-driving-car-engineer-nanodegree--nd013) Program by Udacity. The goal is to drive a car autonomously in a simulator using a deep neuronal network (DNN) trained on human driving behavior. For that Udacity provided the simulator and a basic python script to connect a DNN with it. The simulator has two mode. In the "training mode" the car can be controlled through a keyboard or a game pad to generated data. More information about the data and it's structure can be found in the corresponding section. In the "autonomous mode" however the car receives it input commands by the python script.
+
+The following animations shows the final model controlling the car on both tracks.
+
 Track 1                       |  Track 2
 :----------------------------:|:------------------------------:
 ![Track 1](images/track1.gif) | ![Track 2](images/track2.gif)
