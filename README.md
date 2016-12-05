@@ -39,6 +39,31 @@ python drive.py model.json
 The script will automaticaly connect to the simulator and send commands as soon as it's entering the autonomous mode.
 
 ## Retrain The Model
+
+To retrain the model it's enough to execute the model.py script without any arguments. Some parameters are set as constants at the beginning of the script and can easily be modified for example to set the path to the training data. An overview of the constants is shown below with the default values.
+```python
+# Constants
+IMG_SIZE = [96, 192]
+CROPPING = (32, 0, 0, 0)
+SHIFT_OFFSET = 0.2
+SHIFT_RANGE = 0.2
+
+BATCH_SIZE = 128
+#Patience for early stopping
+PATIENCE = 3
+# Maximal number of epochs. Might stop earlyer.
+NB_EPOCH = 50
+
+TRAINING_DATA_PATHS = ['data/track1_central/driving_log.csv',
+                       'data/track1_recovery/driving_log.csv',
+                       'data/track1_reverse/driving_log.csv',
+                       'data/track1_recovery_reverse/driving_log.csv',
+                       'data/track2_central/driving_log.csv']
+
+VALIDATION_DATA_PATHS = ['data/track1_test/driving_log.csv',
+                         'data/track2_test/driving_log.csv']
+```
+
 # Structure
 ## Data
 
