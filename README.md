@@ -34,6 +34,8 @@ Only needed for driving in the simulator:
 # Structure
 ## Data
 
+![Sample Log](images/sample_log.png)
+
 Left                                   |  Center                                   |  Right
 :-------------------------------------:|:-----------------------------------------:|:-------------------------------------:
 ![Sample Left](images/left_sample.jpg) | ![Sample Center](images/center_sample.jpg)|![Sample Left](images/right_sample.jpg)
