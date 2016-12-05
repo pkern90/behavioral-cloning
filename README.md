@@ -52,7 +52,15 @@ Beside the images the the simulator also creates a log file while recording cont
 
 ![Sample Log](images/sample_log.png)
 
+The data used for training the model can be downloaded [here](https://drive.google.com/open?id=0B02X9kiSe3GBczR6MDdscWxuTEU).
+
 ## Model
+
+The pretrained model can be optained through the following links:
+
+- [model.json](https://drive.google.com/open?id=0B02X9kiSe3GBU1JMWmhTSjJ5aTQ)
+- [model.h5](https://drive.google.com/open?id=0B02X9kiSe3GBSHdOZW0tN29td00)
+
 
 <a href="https://raw.githubusercontent.com/pkern90/behavioral-cloning/master/images/model_wide.png" target="_blank"><img src="images/model_wide.png"></img> </a>
 
