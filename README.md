@@ -42,9 +42,8 @@ The script will automaticaly connect to the simulator and send commands as soon 
 
 To retrain the model it's enough to execute the model.py script without any arguments. Some parameters are set as constants at the beginning of the script and can easily be modified for example to set the path to the training data. An overview of the constants is shown below with the default values.
 ```python
-# Constants
-IMG_SIZE = [96, 192]
-CROPPING = (32, 0, 0, 0)
+IMG_SIZE = [160, 320]
+CROPPING = (54, 0, 0, 0)
 SHIFT_OFFSET = 0.2
 SHIFT_RANGE = 0.2
 
