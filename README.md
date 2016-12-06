@@ -130,3 +130,12 @@ datagen = RegressionImageDataGenerator(rescale=lambda x: x / 127.5 - 1.,
                                             lambda val, shift: val - ((SHIFT_OFFSET / SHIFT_RANGE) * shift),
                                        cropping=(32, 0, 0, 0))
 ```
+
+The following table shows three example images before and after the random transformation including the corresponding steering angles.
+
+.                 | Sample 1                      |  Sample 2                    |  Sample 3
+:-----------------|:-----------------------------:|:----------------------------:|:--------------------------:
+Original Image    |![Original1](images/image_sample_1.png) | ![Original2](images/image_sample_2.png)|![Original3](images/image_sample_3.png)
+Original Angles   |0.461989 | -0.351643|-0.200000
+Transformed Image |![Original1](images/image_gen_sample_1.png) | ![Original2](images/image_gen_sample_2.png)|![Original3](images/image_gen_sample_3.png)
+Transformed Angles|0.61926335 | 0.4209907|0.27578576
