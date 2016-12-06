@@ -105,8 +105,8 @@ Used for validation
 
 The pretrained model can be optained through the following links:
 
-- [model.json](https://drive.google.com/open?id=0B02X9kiSe3GBU1JMWmhTSjJ5aTQ)
-- [model.h5](https://drive.google.com/open?id=0B02X9kiSe3GBSHdOZW0tN29td00)
+- [model.json](https://drive.google.com/open?id=0B02X9kiSe3GBOHZUTmU4S0FNck0)
+- [model.h5](https://drive.google.com/file/d/0B02X9kiSe3GBTUhkeVFXalQxTlE/view?usp=sharing)
 
 
 <a href="https://raw.githubusercontent.com/pkern90/behavioral-cloning/master/images/model_wide.png" target="_blank"><img src="images/model_wide.png"></img> </a>
