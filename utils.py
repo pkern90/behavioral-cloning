@@ -1,8 +1,5 @@
 import scipy.misc as spm
 from keras.preprocessing.image import *
-from keras import backend as K
-import os
-from keras.applications.vgg16 import preprocess_input
 
 
 def normalize(images, new_max, new_min, old_max=None, old_min=None):

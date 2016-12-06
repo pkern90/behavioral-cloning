@@ -1,26 +1,22 @@
 import argparse
 import base64
 import json
-
-import numpy as np
-import socketio
-import eventlet
-import eventlet.wsgi
-import time
-from PIL import Image
-from PIL import ImageOps
-from flask import Flask, render_template
 from io import BytesIO
 
+import eventlet.wsgi
+import numpy as np
+import socketio
+from PIL import Image
+from flask import Flask
 from keras.models import model_from_json
-from keras.preprocessing.image import ImageDataGenerator, array_to_img, img_to_array
 
-from utils import resize_image, crop_image
 from model import CROPPING, IMG_SIZE
+from utils import resize_image, crop_image
 
 sio = socketio.Server()
 app = Flask(__name__)
 model = None
+
 
 @sio.on('telemetry')
 def telemetry(sid, data):
@@ -35,11 +31,10 @@ def telemetry(sid, data):
     image = Image.open(BytesIO(base64.b64decode(imgString)))
     image_array = np.asarray(image)
     image_resized = resize_image(image_array, IMG_SIZE)
-    image_norm = image_resized/127.5 - 1.
+    image_norm = image_resized / 127.5 - 1.
     image_cropped = crop_image(image_norm, CROPPING)
 
     transformed_image_array = image_cropped[None, :, :, :]
-
 
     # This model currently assumes that the features of the model are just the images. Feel free to change this.
     steering_angle = float(model.predict(transformed_image_array, batch_size=1))
@@ -57,8 +52,8 @@ def connect(sid, environ):
 
 def send_control(steering_angle, throttle):
     sio.emit("steer", data={
-    'steering_angle': steering_angle.__str__(),
-    'throttle': throttle.__str__()
+        'steering_angle': steering_angle.__str__(),
+        'throttle': throttle.__str__()
     }, skip_sid=True)
 
 
@@ -67,7 +62,7 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='Remote Driving')
     parser.add_argument('model', type=str,
-    help='Path to model definition json. Model weights should be on the same path.')
+                        help='Path to model definition json. Model weights should be on the same path.')
     args = parser.parse_args()
 
     print("Loading model")

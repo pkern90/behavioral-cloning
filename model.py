@@ -1,20 +1,18 @@
 # Imports
 import json
 
+import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 from keras.applications.vgg16 import VGG16
 from keras.callbacks import EarlyStopping, ModelCheckpoint
-from keras.layers import Convolution2D, Input, MaxPooling2D
-from keras.layers import Dropout, Flatten, Dense
+from keras.layers import Convolution2D, Input, Dropout
+from keras.layers import Flatten, Dense
 from keras.models import Model
-from keras.regularizers import l2
 from keras.utils.visualize_util import plot
-
-import matplotlib.pyplot as plt
 
 from utils import RegressionImageDataGenerator, get_cropped_shape, load_images
 
-import numpy as np
 np.random.seed(7)
 
 # Constants
@@ -23,20 +21,35 @@ CROPPING = (54, 0, 0, 0)
 SHIFT_OFFSET = 0.2
 SHIFT_RANGE = 0.2
 
+BATCH_SIZE = 128
+PATIENCE = 3
+NB_EPOCH = 50
+
+TRAINING_DATA_PATHS = ['data/track1_central/driving_log.csv',
+                       'data/track1_recovery/driving_log.csv',
+                       'data/track1_reverse/driving_log.csv',
+                       'data/track1_recovery_reverse/driving_log.csv',
+                       'data/track2_central/driving_log.csv']
+
+VALIDATION_DATA_PATHS = ['data/track1_test/driving_log.csv',
+                         'data/track2_test/driving_log.csv']
+
 
 # Data loading
-def get_generator(from_directory=False, batch_size=32, fit_sample_size=None):
+def get_generator(train_paths, val_paths, from_directory=False, batch_size=32, fit_sample_size=None):
+    """
+    Creates an image data generator for traning data and one for validation data. Left and Right images are
+    added with an offset steering angle.
+    :param train_paths: A list of paths to all the log files used for training
+    :param val_paths: A list of paths to all the log files used for validation
+    :param from_directory: When true all images will be loaded from disk during training
+    :param batch_size: The batch size to use
+    :param fit_sample_size: The sample size used to fit the image generator. If set to None, no fit will be done.
+    :return: training generator, validation generator
+    """
     header = ['center_img', 'left_img', 'right_img', 'steering_angle', 'throttle', 'break', 'speed']
-    data_paths = ['data/track1_central/driving_log.csv',
-                  'data/track1_recovery/driving_log.csv',
-                  'data/track1_reverse/driving_log.csv',
-                  'data/track1_recovery_reverse/driving_log.csv',
-                  'data/track2_central/driving_log.csv']
 
-    val_paths = ['data/track1_test/driving_log.csv',
-                 'data/track2_test/driving_log.csv']
-
-    log = pd.concat([pd.read_csv(path, names=header) for path in data_paths])
+    log = pd.concat([pd.read_csv(path, names=header) for path in train_paths])
     val_log = pd.concat([pd.read_csv(path, names=header) for path in val_paths])
 
     # Create feature value pairs for the left camera images by subtracting the offset from the steering angle.
@@ -69,8 +82,10 @@ def get_generator(from_directory=False, batch_size=32, fit_sample_size=None):
         del sample_to_fit
 
     if from_directory:
-        return (datagen.flow_from_directory(paths.values, values.values, shuffle=True, target_size=IMG_SIZE, batch_size=batch_size),
-                val_datagen.flow_from_directory(val_log.center_img.values, val_log.steering_angle.values, shuffle=True, target_size=IMG_SIZE, batch_size=batch_size))
+        return (datagen.flow_from_directory(paths.values, values.values, shuffle=True, target_size=IMG_SIZE,
+                                            batch_size=batch_size),
+                val_datagen.flow_from_directory(val_log.center_img.values, val_log.steering_angle.values, shuffle=True,
+                                                target_size=IMG_SIZE, batch_size=batch_size))
     else:
         images = load_images(paths, IMG_SIZE)
         val_images = load_images(val_log.center_img, IMG_SIZE)
@@ -94,19 +109,23 @@ def get_model():
 
     # Add last block to the VGG model with modified sub sampling.
     layer = base_model.outputs[0]
-    layer = Convolution2D(512, 3, 3, subsample=(2, 2), activation='relu', border_mode='same', name='block5_conv1')(layer)
-    layer = Convolution2D(512, 3, 3, subsample=(1, 2), activation='relu', border_mode='same', name='block5_conv2')(layer)
-    layer = Convolution2D(512, 3, 3, subsample=(1, 2), activation='relu', border_mode='same', name='block5_conv3')(layer)
+    layer = Convolution2D(512, 3, 3, subsample=(2, 2), activation='relu', border_mode='same', name='block5_conv1')(
+        layer)
+    layer = Convolution2D(512, 3, 3, subsample=(1, 2), activation='relu', border_mode='same', name='block5_conv2')(
+        layer)
+    layer = Convolution2D(512, 3, 3, subsample=(1, 2), activation='relu', border_mode='same', name='block5_conv3')(
+        layer)
 
     layer = Flatten()(layer)
     layer = Dropout(.2)(layer)
-    layer = Dense(2048,  activation='relu', name='fc1')(layer)
+    layer = Dense(2048, activation='relu', name='fc1')(layer)
     layer = Dropout(.2)(layer)
-    layer = Dense(2048, activation='relu', name='fc2')(layer)
+    layer = Dense(1024, activation='relu', name='fc2')(layer)
     layer = Dropout(.5)(layer)
     layer = Dense(1, activation='linear', name='predictions')(layer)
 
     return Model(input=base_model.input, output=layer)
+
 
 if __name__ == '__main__':
     model = get_model()
@@ -120,17 +139,18 @@ if __name__ == '__main__':
     with open('model.json', 'w') as f:
         json.dump(model_json, f)
 
-    rdi_train, rdi_val = get_generator(True, batch_size=128)
+    rdi_train, rdi_val = get_generator(TRAINING_DATA_PATHS, VALIDATION_DATA_PATHS, True, batch_size=BATCH_SIZE)
 
-    checkpoint = ModelCheckpoint('model.h5', monitor='val_loss', verbose=1, save_best_only=True, save_weights_only=False, mode='auto')
-    early_stopping = EarlyStopping(monitor='val_loss', min_delta=0, patience=5, verbose=1, mode='auto')
+    checkpoint = ModelCheckpoint('model.h5', monitor='val_loss', verbose=1, save_best_only=True,
+                                 save_weights_only=False, mode='auto')
+    early_stopping = EarlyStopping(monitor='val_loss', min_delta=0, patience=PATIENCE, verbose=1, mode='auto')
 
     # Train the model with exactly one version of each image
     history = model.fit_generator(rdi_train,
                                   samples_per_epoch=rdi_train.N,
                                   validation_data=rdi_val,
                                   nb_val_samples=rdi_val.N,
-                                  nb_epoch=50,
+                                  nb_epoch=NB_EPOCH,
                                   callbacks=[checkpoint, early_stopping])
 
     # summarize history for loss
