@@ -80,24 +80,22 @@ The data used for training the model can be downloaded [here](https://drive.goog
 
 Used for training
 
-| Name                     | Number Images  | Description                                                               |
-|:-------------------------|---------------:|:--------------------------------------------------------------------------|
-| track1_central           |  8.978         | driving centered on the road                                              |
-| track1_recovery          |  2.369         | driving from the side of the road back to the center                      |
-| track1_reverse           |  9.254         | driving as centered on the road as possible in opposite direction         |  
-| track1_recovery_reverse  |  2.396         | driving from the side of the road back to the center in opposite direction|
-| track2_central           | 19.274         | driving centered on the road on the second track in both directions       |
-| **total**                | **42.271**     |                                                                           |
-
+ Name                   | Number Images  | Description                                                               
+:-----------------------|---------------:|:--------------------------------------------------------------------------
+ track1_central         |  8.978         | driving centered on the road                                              
+ track1_recovery        |  2.369         | driving from the side of the road back to the center                      
+ track1_reverse         |  9.254         | driving as centered on the road as possible in opposite direction           
+ track1_recovery_reverse|  2.396         | driving from the side of the road back to the center in opposite direction
+ track2_central         | 19.274         | driving centered on the road on the second track in both directions       
+ **total**              | **42.271**     |                                                                           
 
 Used for validation
 
-| Name                     | Number Images  | Description                                                               |
-|:-------------------------|---------------:|:--------------------------------------------------------------------------|
-| track1_test              |  2.882         | driving centered on the road for one round on track 1                     |
-| track2_test              |  2.924         | driving centered on the road for one round on track 2                     |
-| **total**                | **5.806**      |                                                                           |
-
+ Name                   | Number Images  | Description                                                               
+:-----------------------|---------------:|:--------------------------------------------------------------------------
+ track1_test            |  2.882         | driving centered on the road for one round on track 1                     
+ track2_test            |  2.924         | driving centered on the road for one round on track 2                     
+ **total**              | **5.806**      |                                                                           
 
 
 ## Model
@@ -107,6 +105,10 @@ The pretrained model can be optained through the following links:
 - [model.json](https://drive.google.com/open?id=0B02X9kiSe3GBOHZUTmU4S0FNck0)
 - [model.h5](https://drive.google.com/file/d/0B02X9kiSe3GBTUhkeVFXalQxTlE/view?usp=sharing)
 
+For this project a technique called transfer learning was used to reuse a pretrained model for a different task. In this case the model used is the [VGG16 from the Visual Geometry Group](http://www.robots.ox.ac.uk/~vgg/research/very_deep/) trained on the [imagenet](http://image-net.org/) dataset. Since the initial problem the model was trained on is quite different from the problem at hand the last block was removed, rebuild with slidely different parameters and retrained.
+Instead of three convolution layers with no followed by a Max pooling layer, three convolution layer with sub sampling and no pooling layer are used. The top layer was build from scrath to be able to predict contentious values instead of classes.
+
+The complete architecture can be seen in the following image.
 
 <a href="https://raw.githubusercontent.com/pkern90/behavioral-cloning/master/images/model_wide.png" target="_blank"><img src="images/model_wide.png"></img> </a>
 
@@ -114,11 +116,18 @@ The pretrained model can be optained through the following links:
 
 During training a image generator provides data to the model. Since keras vanilla [ImageDataGenerator](https://keras.io/preprocessing/image/) is mainly suited for classification problems I extended the implementation to better work with continous labels. The two main differnces beeing that flow_from_directory takes the labels as paramter instead of infering them from folder names and ability to add transform funktion for the labels to the varius random image transformations. The latter allows to generate randomly transforme images with modified expected values. One particular usecase is to randomly flip road images. If a image gets flipped you also need to change sign of the steering angle. Other changes include the option to pass a function as rescale parameter and the option to cropp images.
 
-The following code snipped shows an example usage of the modified ImageDataGenerator. Images will be normalized to a range from -1 to 1, randomly flipped and also cropped from the top by 32 pixel.
+The following code snipped shows an example usage of the modified ImageDataGenerator. Images will be normalized to a range from -1 to 1, randomly flipped, horizontaly shifted and also cropped from the top by 32 pixel. The lambda function passed to width_shift_value_transform modifies the steering angle based on how much the image was shifted to teach the model to correct for the shift.
 
 ```python
+SHIFT_OFFSET = 0.2
+SHIFT_RANGE = 0.2
+
 datagen = RegressionImageDataGenerator(rescale=lambda x: x / 127.5 - 1.,
                                        horizontal_flip=True,
                                        horizontal_flip_value_transform=lambda val: -val,
+                                       width_shift_range=SHIFT_RANGE,
+                                       width_shift_value_transform=
+                                            lambda val, shift: val - ((SHIFT_OFFSET / SHIFT_RANGE) * shift),
                                        cropping=(32, 0, 0, 0))
 ```
+
