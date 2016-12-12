@@ -1,8 +1,8 @@
 # Behavioral Cloning
 
-This project was created as an assessment for the [Self-Driving Car Nanodegree](https://www.udacity.com/course/self-driving-car-engineer-nanodegree--nd013) Program by Udacity. The goal is to drive a car autonomously in a simulator using a deep neuronal network (DNN) trained on human driving behavior. For that Udacity provided the simulator and a basic python script to connect a DNN with it. The simulator has two mode. In the "training mode" the car can be controlled through a keyboard or a game pad to generated data. More information about the data and it's structure can be found in the corresponding [section](https://github.com/pkern90/behavioral-cloning/blob/master/README.md#data). In the "autonomous mode" however the car receives it input commands by the python script.
+This project was created as an assessment for the [Self-Driving Car Nanodegree](https://www.udacity.com/course/self-driving-car-engineer-nanodegree--nd013) Program by Udacity. The goal is to drive a car autonomously in a simulator using a deep neuronal network (DNN) trained on human driving behavior. For that Udacity provided the simulator and a basic python script to connect a DNN with it. The simulator has two modes. In the "training mode" the car can be controlled through a keyboard or a game pad to generated data. More information about the data and it's structure can be found in the corresponding [section](https://github.com/pkern90/behavioral-cloning/blob/master/README.md#data). In the "autonomous mode" however the car receives it's input commands by the python script.
 
-The following animations shows the final model controlling the car on both tracks.
+The following animations shows the final model controlling the car on two different tracks.
 
 Track 1                       |  Track 2
 :----------------------------:|:------------------------------:
@@ -98,6 +98,8 @@ Used for validation
  **total**              | **5.806**      |                                                                           
 
 
+To validate the model one round on each track was seperately recored and used as validation set. Instead of using a test set, the models were finally evaluated on the simulator since this is the only reliable way to determine the performance.
+
 ## Model
 
 The pretrained model can be obtained through the following links:
@@ -108,7 +110,7 @@ The pretrained model can be obtained through the following links:
 For this project a technique called transfer learning was used to reuse a pretrained model for a different task. In this case the model used is the [VGG16 from the Visual Geometry Group](http://www.robots.ox.ac.uk/~vgg/research/very_deep/) trained on the [imagenet](http://image-net.org/) dataset. Since the initial problem the model was trained on is quite different from the problem at hand the last block was removed, rebuild with slightly different parameters and retrained.
 Instead of three convolution layers with no followed by a Max pooling layer, three convolution layer with sub sampling and no pooling layer are used. The top layer was build from scratch to be able to predict contentious values instead of classes.
 
-The complete architecture can be seen in the following image.
+The complete architecture can be seen in the following image or in the [console ouput](train_output.txt).
 
 <a href="https://raw.githubusercontent.com/pkern90/behavioral-cloning/master/images/model_wide.png" target="_blank"><img src="images/model_wide.png"></img> </a>
 
@@ -130,6 +132,10 @@ datagen = RegressionImageDataGenerator(rescale=lambda x: x / 127.5 - 1.,
                                             lambda val, shift: val - ((SHIFT_OFFSET / SHIFT_RANGE) * shift),
                                        cropping=(32, 0, 0, 0))
 ```
+
+Batch size was set to 128 as recommended in this [paper](https://arxiv.org/abs/1606.02228).
+
+The model was trained using early stopping to prevent over fitting through to much training. The maximum epochs was set to 50 to make sure to stay in a reasonable time frame. To evaluate the models performance, every epoch the validation loss was calculated. The final model trained for 8 epochs before stopping after no improvement for 5 epochs (number of epochs set to wait for an improvement). So the final weights were from the model after 3 epochs.
 
 The following table shows three example images before and after the random transformation including the corresponding steering angles.
 
