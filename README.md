@@ -114,6 +114,8 @@ The complete architecture can be seen in the following image or in the [console 
 
 <a href="https://raw.githubusercontent.com/pkern90/behavioral-cloning/master/images/model_wide.png" target="_blank"><img src="images/model_wide.png"></img> </a>
 
+Besides the transfer learning approach also models build from scratch were evaluated. Mainly architectures based on [nvidias paper](https://arxiv.org/abs/1604.07316) and also one proposed by [comma.ai](https://github.com/commaai/research). They all worked and were able to controll the car in the simulator. In the end the transfer learning model seemed to be able to controll the car best on both tracks with short training time. 
+
 ## Training
 
 During training a image generator provides data to the model. Since keras vanilla [ImageDataGenerator](https://keras.io/preprocessing/image/) is mainly suited for classification problems I extended the implementation to better work with continous labels. The two main differences being that flow_from_directory takes the labels as parameter instead of inferring them from folder names and ability to add transform function for the labels to the varies random image transformations. The latter allows to generate randomly transform images with modified expected values. One particular use case is to randomly flip road images. If a image gets flipped you also need to change sign of the steering angle. Other changes include the option to pass a function as rescale parameter and the option to crop images.
