@@ -86,12 +86,11 @@ def get_generator(train_paths, val_paths, from_directory=False, batch_size=32, f
                                             batch_size=batch_size),
                 val_datagen.flow_from_directory(val_log.center_img.values, val_log.steering_angle.values, shuffle=True,
                                                 target_size=IMG_SIZE, batch_size=batch_size))
-    else:
-        images = load_images(paths, IMG_SIZE)
-        val_images = load_images(val_log.center_img, IMG_SIZE)
+    images = load_images(paths, IMG_SIZE)
+    val_images = load_images(val_log.center_img, IMG_SIZE)
 
-        return (datagen.flow(images, values.values, shuffle=True, batch_size=batch_size),
-                val_datagen.flow(val_images, val_log.steering_angle.values, shuffle=True, batch_size=batch_size))
+    return (datagen.flow(images, values.values, shuffle=True, batch_size=batch_size),
+            val_datagen.flow(val_images, val_log.steering_angle.values, shuffle=True, batch_size=batch_size))
 
 
 def get_model():

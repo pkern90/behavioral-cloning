@@ -264,17 +264,15 @@ class RegressionImageDataGenerator(object):
         if self.channel_shift_range != 0:
             x = random_channel_shift(x, self.channel_shift_range, img_channel_index)
 
-        if self.horizontal_flip:
-            if np.random.random() < 0.5:
-                x = flip_axis(x, img_col_index)
-                if self.horizontal_flip_value_transform:
-                    y = self.horizontal_flip_value_transform(y)
+        if self.horizontal_flip and np.random.random() < 0.5:
+            x = flip_axis(x, img_col_index)
+            if self.horizontal_flip_value_transform:
+                y = self.horizontal_flip_value_transform(y)
 
-        if self.vertical_flip:
-            if np.random.random() < 0.5:
-                x = flip_axis(x, img_row_index)
-                if self.vertical_flip_value_transform:
-                    y = self.vertical_flip_value_transform(y)
+        if self.vertical_flip and np.random.random() < 0.5:
+            x = flip_axis(x, img_row_index)
+            if self.vertical_flip_value_transform:
+                y = self.vertical_flip_value_transform(y)
 
         return x, y
 
@@ -410,11 +408,10 @@ class RegressionDirectoryIterator(Iterator):
                 self.image_shape = self.target_size + (3,)
             else:
                 self.image_shape = (3,) + self.target_size
+        elif self.dim_ordering == 'tf':
+            self.image_shape = self.target_size + (1,)
         else:
-            if self.dim_ordering == 'tf':
-                self.image_shape = self.target_size + (1,)
-            else:
-                self.image_shape = (1,) + self.target_size
+            self.image_shape = (1,) + self.target_size
 
         self.save_to_dir = save_to_dir
         self.save_prefix = save_prefix
